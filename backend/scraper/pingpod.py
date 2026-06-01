@@ -22,10 +22,9 @@ def list_events(token: str, page: int = 1, ipp: int = 50) -> dict:
         f"{BASE_URL}/events",
         params=[
             ("selfOnly", "true"),
-            ("excludeListed", "true"),
-            ("includeSuspended", "true"),
             ("expand", "items._links.replays"),
             ("sort", "-startTime"),
+            ("startTime", "1970-01-01T00:00:00.000Z"),
             ("page", page),
             ("ipp", ipp),
         ],
