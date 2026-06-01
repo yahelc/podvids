@@ -14,6 +14,7 @@ export default function App() {
   useEffect(() => {
     fetchClips(sort).then((data) => {
       setClips(data);
+      (window as any).podvids = { videoUrls: data.map((c) => c.video_url) };
       if (data.length && activeId === null) setActiveId(data[0].id);
     });
   }, [sort]);
