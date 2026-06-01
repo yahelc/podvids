@@ -38,6 +38,8 @@ def update_clip(clip_id: int, patch: ClipPatch, db: Session = Depends(get_db)):
         if not 1 <= patch.rating <= 5:
             raise HTTPException(status_code=400, detail="Rating must be 1-5")
         clip.rating = patch.rating
+    if patch.start_offset is not None:
+        clip.start_offset = max(0, patch.start_offset)
     db.commit()
     db.refresh(clip)
     return clip

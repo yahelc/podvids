@@ -8,7 +8,7 @@ export async function fetchClips(sort: string): Promise<Clip[]> {
 
 export async function patchClip(
   id: number,
-  patch: { title?: string; rating?: number }
+  patch: { title?: string; rating?: number; start_offset?: number }
 ): Promise<Clip> {
   const res = await fetch(`/api/clips/${id}`, {
     method: "PATCH",

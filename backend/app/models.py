@@ -13,4 +13,5 @@ class Clip(Base):
     thumb_url = Column(String)
     title = Column(String)
     rating = Column(Integer)
+    start_offset = Column(Integer, default=0)
     created_at = Column(DateTime, server_default=func.now())

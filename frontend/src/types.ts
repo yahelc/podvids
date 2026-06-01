@@ -7,6 +7,7 @@ export interface Clip {
   thumb_url: string | null;
   title: string | null;
   rating: number | null;
+  start_offset: number | null;
   created_at: string | null;
 }
 

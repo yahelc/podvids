@@ -12,6 +12,7 @@ class ClipOut(BaseModel):
     thumb_url: Optional[str]
     title: Optional[str]
     rating: Optional[int]
+    start_offset: Optional[int] = 0
     created_at: Optional[datetime]
 
     model_config = {"from_attributes": True}
@@ -20,3 +21,4 @@ class ClipOut(BaseModel):
 class ClipPatch(BaseModel):
     title: Optional[str] = None
     rating: Optional[int] = None
+    start_offset: Optional[int] = None

@@ -111,6 +111,19 @@ export default function VideoPlayer({ clip, autoplay, onUpdate, onEnded }: Props
     }
   }, [clip.id]);
 
+  function handleLoadedMetadata() {
+    if (videoRef.current && clip.start_offset) {
+      videoRef.current.currentTime = clip.start_offset;
+    }
+  }
+
+  async function handleSetStartHere() {
+    if (!videoRef.current) return;
+    const offset = Math.floor(videoRef.current.currentTime);
+    const updated = await patchClip(clip.id, { start_offset: offset });
+    onUpdate(updated);
+  }
+
   async function handleSaveTitle(title: string) {
     const updated = await patchClip(clip.id, { title });
     onUpdate(updated);
@@ -130,6 +143,7 @@ export default function VideoPlayer({ clip, autoplay, onUpdate, onEnded }: Props
         controls
         playsInline
         onEnded={onEnded}
+        onLoadedMetadata={handleLoadedMetadata}
         style={{ width: "100%", flex: 1, minHeight: 0, background: "#000", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}
       />
 
@@ -167,6 +181,18 @@ export default function VideoPlayer({ clip, autoplay, onUpdate, onEnded }: Props
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <span style={{ fontSize: 13, color: "#aaa" }}>{formatDate(clip.recorded_at)}</span>
+          <button
+            onClick={handleSetStartHere}
+            title="Save current position as default start"
+            style={{
+              fontSize: 12, background: "rgba(255,107,53,0.2)", color: "#ff9a70",
+              border: "1px solid rgba(255,107,53,0.4)", borderRadius: 20,
+              padding: "4px 12px", cursor: "pointer", fontWeight: 600,
+              minHeight: 32,
+            }}
+          >
+            📍 Set start here{clip.start_offset ? ` (${clip.start_offset}s)` : ""}
+          </button>
           <span style={{
             fontSize: 12,
             background: clip.account === "account1" ? "rgba(255,107,53,0.3)" : "rgba(100,180,255,0.3)",
