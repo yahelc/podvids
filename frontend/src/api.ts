@@ -23,6 +23,12 @@ export async function triggerScrape(): Promise<void> {
   await fetch(`/api/scraper/run`, { method: "POST" });
 }
 
+export async function nameUntitled(): Promise<{ named: number }> {
+  const res = await fetch("/api/clips/name-untitled", { method: "POST" });
+  if (!res.ok) throw new Error("Failed to trigger naming");
+  return res.json();
+}
+
 export async function suggestName(id: number): Promise<string> {
   const res = await fetch(`/api/clips/${id}/name`, { method: "POST" });
   if (!res.ok) throw new Error("Name suggestion failed");

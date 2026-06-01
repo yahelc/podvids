@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Clip, SortMode } from "./types";
-import { fetchClips, triggerScrape } from "./api";
+import { fetchClips, triggerScrape, nameUntitled } from "./api";
 import VideoPlayer from "./components/VideoPlayer";
 import Sidebar from "./components/Sidebar";
 
@@ -10,6 +10,7 @@ export default function App() {
   const [sort, setSort] = useState<SortMode>("date");
   const [autoplay, setAutoplay] = useState(() => localStorage.getItem("autoplay") === "true");
   const [syncing, setSyncing] = useState(false);
+  const [naming, setNaming] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -28,6 +29,17 @@ export default function App() {
     if (!autoplay || activeId === null) return;
     const idx = clips.findIndex((c) => c.id === activeId);
     if (idx < clips.length - 1) setActiveId(clips[idx + 1].id);
+  }
+
+  async function handleNameAll() {
+    setNaming(true);
+    try {
+      await nameUntitled();
+      const data = await fetchClips(sort);
+      setClips(data);
+    } finally {
+      setNaming(false);
+    }
   }
 
   async function handleScrape() {
@@ -53,10 +65,12 @@ export default function App() {
     sort,
     autoplay,
     syncing,
+    naming,
     onSelect: handleSelect,
     onSortChange: setSort,
     onAutoplayToggle: () => setAutoplay((v) => { const next = !v; localStorage.setItem("autoplay", String(next)); return next; }),
     onScrape: handleScrape,
+    onNameAll: handleNameAll,
   };
 
   return (

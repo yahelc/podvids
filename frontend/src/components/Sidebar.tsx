@@ -7,13 +7,15 @@ interface Props {
   sort: SortMode;
   autoplay: boolean;
   syncing: boolean;
+  naming: boolean;
   onSelect: (clip: Clip) => void;
   onSortChange: (s: SortMode) => void;
   onAutoplayToggle: () => void;
   onScrape: () => void;
+  onNameAll: () => void;
 }
 
-export default function Sidebar({ clips, activeId, sort, autoplay, syncing, onSelect, onSortChange, onAutoplayToggle, onScrape }: Props) {
+export default function Sidebar({ clips, activeId, sort, autoplay, syncing, naming, onSelect, onSortChange, onAutoplayToggle, onScrape, onNameAll }: Props) {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "rgba(0,0,0,0.25)" }}>
       <div style={{ padding: "10px 12px", display: "flex", gap: 8, alignItems: "center", borderBottom: "1px solid rgba(255,107,53,0.3)", flexShrink: 0, flexWrap: "wrap" }}>
@@ -46,6 +48,23 @@ export default function Sidebar({ clips, activeId, sort, autoplay, syncing, onSe
           }}
         >
           {syncing ? "⏳ Syncing…" : "🔄 Sync"}
+        </button>
+        <button
+          onClick={onNameAll}
+          disabled={naming}
+          style={{
+            fontSize: 12,
+            background: naming ? "#555" : "#2a4a2a",
+            color: naming ? "#aaa" : "#7dff7d",
+            border: "1px solid #7dff7d",
+            padding: "5px 10px",
+            borderRadius: 6,
+            cursor: naming ? "default" : "pointer",
+            fontWeight: 700,
+            transition: "background 0.2s",
+          }}
+        >
+          {naming ? "✨ Naming…" : "✨ Name all"}
         </button>
       </div>
       <div style={{ padding: "6px 12px", fontSize: 11, color: "#ff6b35", fontWeight: 700, borderBottom: "1px solid rgba(255,107,53,0.2)" }}>
