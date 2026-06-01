@@ -22,6 +22,13 @@ def scrape_account(label: str, token: str, db) -> int:
         print(f"  Fetching page {page}...")
         data = list_events(token, page=page, ipp=50)
         events = data.get("items", [])
+        print(f"  Got {len(events)} events, total={data.get('total')}")
+        if events:
+            import json
+            first = events[0]
+            print(f"  First event keys: {list(first.keys())}")
+            replays_raw = first.get("_links", {}).get("replays", {})
+            print(f"  First event replays structure: {json.dumps(replays_raw)[:500]}")
         if not events:
             break
 
