@@ -30,7 +30,8 @@ function Stars({ rating, onChange }: { rating: number | null; onChange: (r: numb
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
+  return new Date(iso).toLocaleString("en-US", {
+    timeZone: "America/New_York",
     weekday: "short",
     month: "short",
     day: "numeric",
