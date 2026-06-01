@@ -82,7 +82,32 @@ def name_untitled_clips():
         db.close()
 
 
-@router.get("/api/debug/models")
+@router.post("/api/clips/name-untitled")
+def trigger_name_untitled():
+    """Manually trigger the auto-namer and return results synchronously."""
+    if not settings.do_inference_api_key:
+        raise HTTPException(status_code=503, detail="DO_INFERENCE_API_KEY not configured")
+    db = SessionLocal()
+    results = []
+    try:
+        untitled = db.query(Clip).filter(Clip.title == None).all()
+        print(f"Auto-namer triggered: {len(untitled)} untitled clips")
+        for clip in untitled:
+            try:
+                image_url = clip.thumb_url or clip.video_url
+                name = _call_inference(image_url)
+                clip.title = name
+                db.commit()
+                print(f"  Named clip {clip.id}: {name}")
+                results.append({"id": clip.id, "name": name})
+            except Exception as e:
+                print(f"  Failed to name clip {clip.id}: {e}")
+                results.append({"id": clip.id, "error": str(e)})
+    finally:
+        db.close()
+    return {"named": len([r for r in results if "name" in r]), "results": results}
+
+
 def list_models():
     if not settings.do_inference_api_key:
         raise HTTPException(status_code=503, detail="DO_INFERENCE_API_KEY not configured")
