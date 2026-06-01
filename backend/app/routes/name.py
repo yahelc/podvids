@@ -4,39 +4,107 @@ from ..database import get_db, SessionLocal
 from ..models import Clip
 from ..config import settings
 import httpx
+from datetime import date, datetime, timezone
 
 router = APIRouter(tags=["name"])
 
 INFERENCE_URL = "https://inference.do-ai.run/v1/chat/completions"
 MODEL = "openai-gpt-4o"
-PROMPT = """You are naming a short table tennis highlight clip for a family's private video archive.
+
+SKIP_DATE = date(2026, 2, 7)
+
+PROMPT_TEMPLATE = """You are naming a short table tennis highlight clip for a family's private video archive.
+This clip was recorded on {date_context}.
 
 PEOPLE IN THE CLIPS:
-- "Barak" is the kid (young boy, child-sized)
-- "Abba" is the dad (adult)
-- If only one person is clearly visible, use their name based on size/age
-- If both are visible, use both names
+- "Barak" is the kid (young boy, child-sized, shorter)
+- "Abba" is the dad (adult, taller)
+- Name only the person(s) clearly visible — use size/age to distinguish them
+- If both are visible, name both
 
-NAMING STYLE — channel the fun, hype energy of Pongfinity and ping pong YouTube:
-- Use shot terminology when visible: loop, smash, flick, drive, push, chop, lob, block, banana flip, tweener, counter
-- Add dramatic flair: MONSTER, insane, epic, clutch, no-look, jaw-dropping
-- Reference the outcome or situation: match point save, impossible return, net edge luck, table-length rally
-- Keep it punchy — this is a highlight reel, not a technical report
+SHOT VOCABULARY — identify and use the most specific term you can see:
+- Serves: topspin serve, backspin serve, no-look serve, short push serve
+- Attacking: forehand loop, backhand loop, forehand smash, backhand smash, flick, banana flip, counter-loop, speed drive
+- Defensive: push, chop, lob, block, fishing lob, desperation retrieve
+- Trick shots: tweener (between the legs), around-the-net, behind-the-back, jump smash
+- Rally descriptors: table-length exchange, multiball rally, cross-court duel, down-the-line winner
+
+SEASONAL / DATE CONTEXT — weave in when it fits naturally:
+- January 1: New Year's Day
+- Around December 25: Christmas
+- February: Valentine's / Winter
+- March–April: Spring Training / Spring
+- May–June: Summer
+- September–October: Autumn / Fall
+- November: Late Autumn
+- December (not Christmas): Winter / Holiday Season
+{holiday_hint}
+
+VARIETY RULES — vary your sentence structure every title:
+- Sometimes lead with the shot: "Banana Flip Winner by Barak"
+- Sometimes lead with the person: "Barak Rips a No-Look Serve"
+- Sometimes lead with the drama: "Incredible Lob Save Then Smash"
+- Sometimes use a scene-setting word: "Late-Night Loop Fest Barak vs Abba"
+- Sometimes be poetic or punny: "Abba Drops the Hammer", "Winter Ace by Barak"
+- Avoid starting back-to-back titles with the same word (especially avoid overusing "Epic")
+- Forbidden words (do NOT use): epic, legendary, incredible, amazing, unbelievable
 
 RULES:
 - Max 10 words
 - No quotes, no punctuation at the end
 - Reply with ONLY the title, nothing else
 
-Examples of good titles:
-- Barak Monster Forehand Loop Winner
-- Abba Sneaky Backspin Serve
-- Insane Cross-Court Smash by Barak
-- Abba vs Barak Epic Rally Survival
-- Clutch Lob Save Then Smash"""
+Examples of the variety and specificity we want:
+- Barak Rips Cross-Court Banana Flip Winner
+- Abba Drops the Hammer on Short Ball
+- New Year Loop Fest Barak vs Abba
+- Clutch Lob Save by Abba Then Smash
+- Autumn Backhand Chop Survival Barak
+- Barak No-Look Serve Catches Abba Off Guard
+- Spring Multiball Madness with Abba
+- Holiday Smash Fest Dad vs Kid
+- Abba Sneaky Backspin Serve Short Corner
+- Behind-the-Back Tweener by Barak"""
 
 
-def _call_inference(image_url: str) -> str:
+def _date_context(recorded_at: datetime) -> tuple[str, str]:
+    """Returns (human-readable date string, optional holiday hint line)."""
+    if recorded_at.tzinfo is None:
+        recorded_at = recorded_at.replace(tzinfo=timezone.utc)
+    d = recorded_at.date()
+    month = d.month
+    day = d.day
+
+    month_names = ["", "January", "February", "March", "April", "May", "June",
+                   "July", "August", "September", "October", "November", "December"]
+    date_str = f"{month_names[month]} {day}, {d.year}"
+
+    holiday_hint = ""
+    if month == 1 and day == 1:
+        holiday_hint = "- TODAY IS NEW YEAR'S DAY — use 'New Year' somewhere in the title"
+    elif month == 12 and 24 <= day <= 26:
+        holiday_hint = "- THIS IS CHRISTMAS — use 'Christmas' or 'Holiday' in the title"
+    elif month == 11 and 20 <= day <= 30:
+        holiday_hint = "- This is Thanksgiving week — consider 'Thanksgiving' or 'Turkey Day' if it fits"
+    elif month == 2 and 13 <= day <= 14:
+        holiday_hint = "- This is Valentine's Day — consider 'Valentine' if it fits"
+    elif month == 10 and day == 31:
+        holiday_hint = "- THIS IS HALLOWEEN — use 'Halloween' in the title"
+
+    return date_str, holiday_hint
+
+
+def _build_prompt(recorded_at: datetime | None) -> str:
+    if recorded_at:
+        date_str, holiday_hint = _date_context(recorded_at)
+    else:
+        date_str = "an unknown date"
+        holiday_hint = ""
+    return PROMPT_TEMPLATE.format(date_context=date_str, holiday_hint=holiday_hint)
+
+
+def _call_inference(image_url: str, recorded_at: datetime | None = None) -> str:
+    prompt = _build_prompt(recorded_at)
     resp = httpx.post(
         INFERENCE_URL,
         headers={"Authorization": f"Bearer {settings.do_inference_api_key}"},
@@ -48,7 +116,7 @@ def _call_inference(image_url: str) -> str:
                     "role": "user",
                     "content": [
                         {"type": "image_url", "image_url": {"url": image_url}},
-                        {"type": "text", "text": PROMPT},
+                        {"type": "text", "text": prompt},
                     ],
                 }
             ],
@@ -62,17 +130,19 @@ def _call_inference(image_url: str) -> str:
 
 
 def name_untitled_clips():
-    """Background job: auto-name any clips missing a title."""
+    """Background job: auto-name any clips missing a title, skipping Feb 7 2026."""
     if not settings.do_inference_api_key:
         return
     db = SessionLocal()
     try:
         untitled = db.query(Clip).filter(Clip.title == None).all()
-        print(f"Auto-namer: {len(untitled)} untitled clips to process")
-        for clip in untitled:
+        skipped = [c for c in untitled if c.recorded_at and c.recorded_at.date() == SKIP_DATE]
+        to_name = [c for c in untitled if not (c.recorded_at and c.recorded_at.date() == SKIP_DATE)]
+        print(f"Auto-namer: {len(to_name)} untitled clips to process, {len(skipped)} skipped (Feb 7)")
+        for clip in to_name:
             try:
                 image_url = clip.thumb_url or clip.video_url
-                name = _call_inference(image_url)
+                name = _call_inference(image_url, clip.recorded_at)
                 clip.title = name
                 db.commit()
                 print(f"  Named clip {clip.id}: {name}")
@@ -91,11 +161,13 @@ def trigger_name_untitled():
     results = []
     try:
         untitled = db.query(Clip).filter(Clip.title == None).all()
-        print(f"Auto-namer triggered: {len(untitled)} untitled clips")
-        for clip in untitled:
+        to_name = [c for c in untitled if not (c.recorded_at and c.recorded_at.date() == SKIP_DATE)]
+        skipped_count = len(untitled) - len(to_name)
+        print(f"Auto-namer triggered: {len(to_name)} untitled clips ({skipped_count} skipped, Feb 7)")
+        for clip in to_name:
             try:
                 image_url = clip.thumb_url or clip.video_url
-                name = _call_inference(image_url)
+                name = _call_inference(image_url, clip.recorded_at)
                 clip.title = name
                 db.commit()
                 print(f"  Named clip {clip.id}: {name}")
@@ -105,7 +177,7 @@ def trigger_name_untitled():
                 results.append({"id": clip.id, "error": str(e)})
     finally:
         db.close()
-    return {"named": len([r for r in results if "name" in r]), "results": results}
+    return {"named": len([r for r in results if "name" in r]), "skipped": skipped_count, "results": results}
 
 
 def list_models():
@@ -128,5 +200,5 @@ def suggest_name(clip_id: int, db: Session = Depends(get_db)):
     if not clip:
         raise HTTPException(status_code=404, detail="Clip not found")
 
-    name = _call_inference(clip.thumb_url or clip.video_url)
+    name = _call_inference(clip.thumb_url or clip.video_url, clip.recorded_at)
     return {"name": name}
