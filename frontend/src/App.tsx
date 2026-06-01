@@ -8,7 +8,7 @@ export default function App() {
   const [clips, setClips] = useState<Clip[]>([]);
   const [activeId, setActiveId] = useState<number | null>(null);
   const [sort, setSort] = useState<SortMode>("date");
-  const [autoplay, setAutoplay] = useState(false);
+  const [autoplay, setAutoplay] = useState(() => localStorage.getItem("autoplay") === "true");
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
@@ -80,7 +80,7 @@ export default function App() {
           syncing={syncing}
           onSelect={(c) => setActiveId(c.id)}
           onSortChange={setSort}
-          onAutoplayToggle={() => setAutoplay((v) => !v)}
+          onAutoplayToggle={() => setAutoplay((v) => { const next = !v; localStorage.setItem("autoplay", String(next)); return next; })}
           onScrape={handleScrape}
         />
       </div>
