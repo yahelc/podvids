@@ -10,6 +10,16 @@
       html, body, #root { height: 100%; width: 100%; }
       body { overflow: hidden; }
       /* iPad landscape: side-by-side. iPad portrait / small: stack */
+      /* iPad landscape / wide: show sidebar, hide mobile bar */
+      @media (min-width: 700px) {
+        #sidebar { display: flex !important; flex-direction: column; }
+        .mobile-bar { display: none !important; }
+      }
+      /* Narrow (phone portrait, small iPad portrait): hide sidebar, show mobile bar */
+      @media (max-width: 699px) {
+        #sidebar { display: none !important; }
+        .mobile-bar { display: flex !important; }
+      }
       @media (orientation: portrait) and (max-width: 900px) {
         #layout { flex-direction: column !important; }
         #sidebar { width: 100% !important; height: 280px; border-left: none !important; border-top: 2px solid rgba(255,107,53,0.3) !important; }
