@@ -79,6 +79,9 @@ def scrape_all():
     finally:
         db.close()
 
+    from app.routes.name import name_untitled_clips
+    name_untitled_clips()
+
 
 if __name__ == "__main__":
     scrape_all()

@@ -1,17 +1,25 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from pathlib import Path
 from .database import engine
 from .models import Base
 from .routes.clips import router as clips_router
 from .routes.scraper import router as scraper_router
-from .routes.name import router as name_router
+from .routes.name import router as name_router, name_untitled_clips
+import threading
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="PodVids")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    threading.Thread(target=name_untitled_clips, daemon=True).start()
+    yield
+
+
+app = FastAPI(title="PodVids", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
