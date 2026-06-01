@@ -10,10 +10,10 @@ router = APIRouter(prefix="/api/clips", tags=["name"])
 INFERENCE_URL = "https://inference.do-ai.run/v1/chat/completions"
 MODEL = "kimi-k2.6"
 PROMPT = (
-    "This is a short table tennis clip, approximately 26 seconds long. "
-    "Watch the clip and generate a fun, specific title of 5 words or fewer "
-    "that captures what happens — ideally referencing the shot type, outcome, "
-    "or anything memorable. Reply with only the title, no quotes, no punctuation at the end."
+    "This is a frame from a 26-second table tennis rally clip. "
+    "Generate a fun, specific title of 5 words or fewer that could describe this rally — "
+    "referencing the shot type, player position, or anything visible. "
+    "Reply with only the title, no quotes, no punctuation at the end."
 )
 
 
@@ -26,6 +26,7 @@ def suggest_name(clip_id: int, db: Session = Depends(get_db)):
     if not clip:
         raise HTTPException(status_code=404, detail="Clip not found")
 
+    image_url = clip.thumb_url or clip.video_url
     resp = httpx.post(
         INFERENCE_URL,
         headers={"Authorization": f"Bearer {settings.do_inference_api_key}"},
@@ -37,8 +38,8 @@ def suggest_name(clip_id: int, db: Session = Depends(get_db)):
                     "role": "user",
                     "content": [
                         {
-                            "type": "video_url",
-                            "video_url": {"url": clip.video_url},
+                            "type": "image_url",
+                            "image_url": {"url": image_url},
                         },
                         {
                             "type": "text",
