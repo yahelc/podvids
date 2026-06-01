@@ -22,3 +22,10 @@ export async function patchClip(
 export async function triggerScrape(): Promise<void> {
   await fetch(`/api/scraper/run`, { method: "POST" });
 }
+
+export async function suggestName(id: number): Promise<string> {
+  const res = await fetch(`/api/clips/${id}/name`, { method: "POST" });
+  if (!res.ok) throw new Error("Name suggestion failed");
+  const data = await res.json();
+  return data.name;
+}

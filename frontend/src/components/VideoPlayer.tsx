@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import type { Clip } from "../types";
-import { patchClip } from "../api";
+import { patchClip, suggestName } from "../api";
 
 interface Props {
   clip: Clip;
@@ -43,8 +43,19 @@ function formatDate(iso: string): string {
   });
 }
 
-function TitleModal({ current, onSave, onClose }: { current: string; onSave: (t: string) => void; onClose: () => void }) {
+function TitleModal({ clipId, current, onSave, onClose }: { clipId: number; current: string; onSave: (t: string) => void; onClose: () => void }) {
   const [draft, setDraft] = useState(current);
+  const [naming, setNaming] = useState(false);
+
+  async function handleSuggest() {
+    setNaming(true);
+    try {
+      const name = await suggestName(clipId);
+      setDraft(name);
+    } finally {
+      setNaming(false);
+    }
+  }
   return (
     <div
       onClick={onClose}
@@ -65,7 +76,20 @@ function TitleModal({ current, onSave, onClose }: { current: string; onSave: (t:
           borderTop: "3px solid #ff6b35",
         }}
       >
-        <div style={{ fontSize: 16, fontWeight: 700, color: "#ff6b35", marginBottom: 16 }}>Name this rally</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "#ff6b35" }}>Name this rally</div>
+          <button
+            onClick={handleSuggest}
+            disabled={naming}
+            style={{
+              fontSize: 13, padding: "6px 14px", borderRadius: 20,
+              border: "1px solid rgba(255,107,53,0.5)", background: "rgba(255,107,53,0.15)",
+              color: naming ? "#888" : "#ff9a70", cursor: naming ? "default" : "pointer", fontWeight: 600,
+            }}
+          >
+            {naming ? "⏳ Thinking…" : "✨ Name it"}
+          </button>
+        </div>
         <input
           autoFocus
           value={draft}
@@ -208,6 +232,7 @@ export default function VideoPlayer({ clip, autoplay, onUpdate, onEnded }: Props
 
       {showModal && (
         <TitleModal
+          clipId={clip.id}
           current={clip.title ?? ""}
           onSave={handleSaveTitle}
           onClose={() => setShowModal(false)}

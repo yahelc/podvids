@@ -7,6 +7,7 @@ from .database import engine
 from .models import Base
 from .routes.clips import router as clips_router
 from .routes.scraper import router as scraper_router
+from .routes.name import router as name_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -21,6 +22,7 @@ app.add_middleware(
 
 app.include_router(clips_router)
 app.include_router(scraper_router)
+app.include_router(name_router)
 
 # Serve built frontend — present in production, absent in dev (gracefully skipped)
 _static = Path(__file__).parent / "static"
