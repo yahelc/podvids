@@ -9,6 +9,7 @@ export default function App() {
   const [activeId, setActiveId] = useState<number | null>(null);
   const [sort, setSort] = useState<SortMode>("date");
   const [autoplay, setAutoplay] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     fetchClips(sort).then((data) => {
@@ -28,29 +29,55 @@ export default function App() {
   }
 
   async function handleScrape() {
+    setSyncing(true);
     await triggerScrape();
-    setTimeout(() => fetchClips(sort).then(setClips), 2000);
+    setTimeout(() => {
+      fetchClips(sort).then(setClips);
+      setSyncing(false);
+    }, 4000);
   }
 
   const activeClip = clips.find((c) => c.id === activeId) ?? null;
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: "#111", color: "#eee", fontFamily: "system-ui, sans-serif" }}>
+    <div id="layout" style={{
+      display: "flex",
+      height: "100vh",
+      background: "linear-gradient(135deg, #0f2027, #203a43, #2c5364)",
+      color: "#fff",
+      fontFamily: "'Segoe UI', system-ui, sans-serif",
+    }}>
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        {/* Header */}
+        <div style={{
+          padding: "10px 20px",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          background: "rgba(0,0,0,0.3)",
+          borderBottom: "2px solid #ff6b35",
+        }}>
+          <span style={{ fontSize: 28 }}>🏓</span>
+          <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: 1, color: "#ff6b35" }}>PodVids</span>
+          <span style={{ fontSize: 13, color: "#aaa", marginLeft: 4 }}>ping pong highlights</span>
+        </div>
+
         {activeClip ? (
           <VideoPlayer clip={activeClip} onUpdate={handleUpdate} onEnded={handleEnded} />
         ) : (
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#444" }}>
-            Select a clip from the sidebar
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, color: "#aaa" }}>
+            <span style={{ fontSize: 64 }}>🏓</span>
+            <span style={{ fontSize: 18 }}>No clips yet — hit Sync to load your highlights!</span>
           </div>
         )}
       </div>
-      <div style={{ width: 280, flexShrink: 0 }}>
+      <div id="sidebar" style={{ width: 300, flexShrink: 0, borderLeft: "2px solid rgba(255,107,53,0.3)" }}>
         <Sidebar
           clips={clips}
           activeId={activeId}
           sort={sort}
           autoplay={autoplay}
+          syncing={syncing}
           onSelect={(c) => setActiveId(c.id)}
           onSortChange={setSort}
           onAutoplayToggle={() => setAutoplay((v) => !v)}

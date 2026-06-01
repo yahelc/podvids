@@ -2,8 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PodVids</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>PodVids 🏓</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body, #root { height: 100%; width: 100%; }
+      body { overflow: hidden; }
+      /* iPad landscape: side-by-side. iPad portrait / small: stack */
+      @media (orientation: portrait) and (max-width: 900px) {
+        #layout { flex-direction: column !important; }
+        #sidebar { width: 100% !important; height: 280px; border-left: none !important; border-top: 2px solid rgba(255,107,53,0.3) !important; }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

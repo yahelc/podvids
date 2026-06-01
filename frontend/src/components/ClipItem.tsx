@@ -23,29 +23,33 @@ export default function ClipItem({ clip, active, onClick }: Props) {
       style={{
         display: "flex",
         gap: 10,
-        padding: "8px 10px",
+        padding: "10px 12px",
         cursor: "pointer",
-        backgroundColor: active ? "#2a2a2a" : "transparent",
-        borderLeft: active ? "3px solid #4af" : "3px solid transparent",
+        background: active
+          ? "linear-gradient(135deg, rgba(255,107,53,0.25), rgba(255,107,53,0.1))"
+          : "transparent",
+        borderLeft: active ? "4px solid #ff6b35" : "4px solid transparent",
         alignItems: "center",
+        transition: "background 0.15s",
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
       }}
     >
       {clip.thumb_url ? (
         <img
           src={clip.thumb_url}
           alt=""
-          style={{ width: 72, height: 48, objectFit: "cover", borderRadius: 4, flexShrink: 0 }}
+          style={{ width: 76, height: 52, objectFit: "cover", borderRadius: 6, flexShrink: 0, border: active ? "2px solid #ff6b35" : "2px solid transparent" }}
         />
       ) : (
-        <div style={{ width: 72, height: 48, background: "#333", borderRadius: 4, flexShrink: 0 }} />
+        <div style={{ width: 76, height: 52, background: "#1a2a3a", borderRadius: 6, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🏓</div>
       )}
-      <div style={{ overflow: "hidden" }}>
-        <div style={{ fontSize: 13, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "#eee" }}>
-          {clip.title || "Untitled"}
+      <div style={{ overflow: "hidden", flex: 1 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: active ? "#ff6b35" : "#eee" }}>
+          {clip.title || "Untitled rally"}
         </div>
         <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>{formatDate(clip.recorded_at)}</div>
         {clip.rating && (
-          <div style={{ fontSize: 11, color: "#fa0", marginTop: 1 }}>{"★".repeat(clip.rating)}{"☆".repeat(5 - clip.rating)}</div>
+          <div style={{ fontSize: 12, color: "#ffd700", marginTop: 2 }}>{"★".repeat(clip.rating)}{"☆".repeat(5 - clip.rating)}</div>
         )}
       </div>
     </div>
