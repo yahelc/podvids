@@ -35,6 +35,7 @@ def scrape_account(label: str, email: str, password: str, db) -> int:
             print(f"  First event keys: {list(first.keys())}")
             replays_raw = first.get("_links", {}).get("replays", {})
             print(f"  First event replays structure: {json.dumps(replays_raw)[:1000]}")
+            print(f"  First event direct replays key: {json.dumps(first.get('replays'))[:1000]}")
             # Also dump the full first event so we can see the real shape
             print(f"  Full first event (truncated): {json.dumps(first)[:2000]}")
         if not events:
