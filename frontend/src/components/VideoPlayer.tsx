@@ -159,7 +159,7 @@ export default function VideoPlayer({ clip, autoplay, onUpdate, onEnded }: Props
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, padding: "12px 16px 16px", gap: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, padding: "12px 16px 16px", gap: 12, overflowY: "auto" }}>
       <video
         key={clip.id}
         ref={videoRef}
@@ -168,7 +168,7 @@ export default function VideoPlayer({ clip, autoplay, onUpdate, onEnded }: Props
         playsInline
         onEnded={onEnded}
         onLoadedMetadata={handleLoadedMetadata}
-        style={{ width: "100%", flex: 1, minHeight: 0, background: "#000", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}
+        style={{ width: "100%", aspectRatio: "16/9", background: "#000", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.5)", flexShrink: 0 }}
       />
 
       <div style={{
