@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import type { Clip } from "../types";
 import { patchClip, suggestName } from "../api";
 
@@ -41,6 +41,12 @@ function formatDate(iso: string): string {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function formatTime(s: number): string {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2, "0")}`;
 }
 
 function TitleModal({ clipId, current, onSave, onClose }: { clipId: number; current: string; onSave: (t: string) => void; onClose: () => void }) {
@@ -127,18 +133,126 @@ function TitleModal({ clipId, current, onSave, onClose }: { clipId: number; curr
 
 export default function VideoPlayer({ clip, autoplay, onUpdate, onEnded }: Props) {
   const [showModal, setShowModal] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const [hasAirPlay, setHasAirPlay] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const seekingRef = useRef(false);
+
+  const scheduleHide = useCallback((isPlaying: boolean) => {
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    if (isPlaying) {
+      hideTimerRef.current = setTimeout(() => setControlsVisible(false), 3000);
+    }
+  }, []);
+
+  function revealControls() {
+    setControlsVisible(true);
+    scheduleHide(playing);
+  }
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    // Detect AirPlay availability (Safari only)
+    if ("WebKitPlaybackTargetAvailabilityEvent" in window) {
+      const handler = (e: Event) => {
+        const ev = e as any;
+        setHasAirPlay(ev.availability === "available");
+      };
+      v.addEventListener("webkitplaybacktargetavailabilitychanged", handler);
+      return () => v.removeEventListener("webkitplaybacktargetavailabilitychanged", handler);
+    }
+  }, []);
 
   useEffect(() => {
     if (autoplay && videoRef.current) {
       videoRef.current.play().catch(() => {});
     }
+    setCurrentTime(0);
+    setDuration(0);
+    setPlaying(false);
+    setControlsVisible(true);
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
   }, [clip.id]);
 
+  useEffect(() => () => { if (hideTimerRef.current) clearTimeout(hideTimerRef.current); }, []);
+
   function handleLoadedMetadata() {
-    if (videoRef.current && clip.start_offset) {
-      videoRef.current.currentTime = clip.start_offset;
+    const v = videoRef.current;
+    if (!v) return;
+    setDuration(v.duration);
+    if (clip.start_offset) v.currentTime = clip.start_offset;
+  }
+
+  function handleTimeUpdate() {
+    if (!seekingRef.current && videoRef.current) {
+      setCurrentTime(videoRef.current.currentTime);
     }
+  }
+
+  function handlePlay() {
+    setPlaying(true);
+    scheduleHide(true);
+  }
+
+  function handlePause() {
+    setPlaying(false);
+    setControlsVisible(true);
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+  }
+
+  function togglePlay(e: React.MouseEvent | React.TouchEvent) {
+    e.stopPropagation();
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) v.play().catch(() => {});
+    else v.pause();
+    revealControls();
+  }
+
+  function handleVideoTap() {
+    if (controlsVisible) {
+      // tap on video (not controls) while visible: just toggle play
+      const v = videoRef.current;
+      if (!v) return;
+      if (v.paused) v.play().catch(() => {});
+      else v.pause();
+    }
+    revealControls();
+  }
+
+  function handleSeekStart() {
+    seekingRef.current = true;
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+  }
+
+  function handleSeekInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const t = Number(e.target.value);
+    setCurrentTime(t);
+    if (videoRef.current) videoRef.current.currentTime = t;
+  }
+
+  function handleSeekEnd() {
+    seekingRef.current = false;
+    scheduleHide(playing);
+  }
+
+  function handleAirPlay(e: React.MouseEvent) {
+    e.stopPropagation();
+    const v = videoRef.current as any;
+    if (v?.webkitShowPlaybackTargetPicker) v.webkitShowPlaybackTargetPicker();
+  }
+
+  function handleFullscreen(e: React.MouseEvent) {
+    e.stopPropagation();
+    const v = videoRef.current as any;
+    if (!v) return;
+    if (v.requestFullscreen) v.requestFullscreen();
+    else if (v.webkitEnterFullscreen) v.webkitEnterFullscreen();
   }
 
   async function handleSetStartHere() {
@@ -158,19 +272,117 @@ export default function VideoPlayer({ clip, autoplay, onUpdate, onEnded }: Props
     onUpdate(updated);
   }
 
+  const pct = duration ? (currentTime / duration) * 100 : 0;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, padding: "12px 16px 16px", gap: 12, overflowY: "auto" }}>
-      <video
-        key={clip.id}
-        ref={videoRef}
-        src={clip.video_url}
-        controls
-        playsInline
-        onEnded={onEnded}
-        onLoadedMetadata={handleLoadedMetadata}
-        style={{ width: "100%", aspectRatio: "16/9", background: "#000", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.5)", flexShrink: 0 }}
-      />
+      {/* Video container with custom controls */}
+      <div
+        style={{ position: "relative", width: "100%", aspectRatio: "16/9", background: "#000", borderRadius: 12, overflow: "hidden", flexShrink: 0, boxShadow: "0 8px 32px rgba(0,0,0,0.5)", cursor: "pointer" }}
+        onClick={handleVideoTap}
+      >
+        <video
+          key={clip.id}
+          ref={videoRef}
+          src={clip.video_url}
+          playsInline
+          onEnded={onEnded}
+          onLoadedMetadata={handleLoadedMetadata}
+          onTimeUpdate={handleTimeUpdate}
+          onPlay={handlePlay}
+          onPause={handlePause}
+          style={{ width: "100%", height: "100%", display: "block" }}
+        />
 
+        {/* Center play/pause indicator — flashes briefly */}
+        {!playing && (
+          <div style={{
+            position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+            pointerEvents: "none",
+          }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: "50%",
+              background: "rgba(0,0,0,0.55)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <span style={{ fontSize: 28, marginLeft: 4 }}>▶</span>
+            </div>
+          </div>
+        )}
+
+        {/* Bottom controls overlay */}
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: "absolute", bottom: 0, left: 0, right: 0,
+            background: "linear-gradient(transparent, rgba(0,0,0,0.75))",
+            padding: "28px 12px 10px",
+            opacity: controlsVisible ? 1 : 0,
+            transition: "opacity 0.3s",
+            pointerEvents: controlsVisible ? "auto" : "none",
+          }}
+        >
+          {/* Seek bar */}
+          <div style={{ position: "relative", height: 20, display: "flex", alignItems: "center", marginBottom: 6 }}>
+            {/* Track background */}
+            <div style={{ position: "absolute", left: 0, right: 0, height: 3, background: "rgba(255,255,255,0.25)", borderRadius: 2 }} />
+            {/* Filled portion */}
+            <div style={{ position: "absolute", left: 0, width: `${pct}%`, height: 3, background: "#ff6b35", borderRadius: 2, pointerEvents: "none" }} />
+            <input
+              type="range"
+              min={0}
+              max={duration || 100}
+              step={0.1}
+              value={currentTime}
+              onPointerDown={handleSeekStart}
+              onChange={handleSeekInput}
+              onPointerUp={handleSeekEnd}
+              style={{
+                position: "absolute", left: 0, right: 0, width: "100%",
+                opacity: 0, height: 20, cursor: "pointer", margin: 0,
+              }}
+            />
+          </div>
+
+          {/* Bottom row */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button
+              onClick={togglePlay}
+              style={{ background: "none", border: "none", color: "#fff", fontSize: 18, cursor: "pointer", padding: "0 4px", lineHeight: 1, minWidth: 28 }}
+            >
+              {playing ? "⏸" : "▶"}
+            </button>
+            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", fontVariantNumeric: "tabular-nums" }}>
+              {formatTime(currentTime)} / {formatTime(duration)}
+            </span>
+            <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+              {hasAirPlay && (
+                <button
+                  onClick={handleAirPlay}
+                  title="AirPlay"
+                  style={{ background: "none", border: "none", color: "#fff", fontSize: 18, cursor: "pointer", padding: "0 4px", lineHeight: 1 }}
+                >
+                  {/* AirPlay icon — triangle into rectangle */}
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 17l-5 4h10l-5-4zm0-14C6.48 3 2 7.48 2 13c0 3.07 1.39 5.81 3.58 7.66l1.43-1.43A8 8 0 014 13c0-4.42 3.58-8 8-8s8 3.58 8 8a7.97 7.97 0 01-3 6.22l1.42 1.42A9.96 9.96 0 0022 13c0-5.52-4.48-10-10-10z"/>
+                  </svg>
+                </button>
+              )}
+              <button
+                onClick={handleFullscreen}
+                title="Fullscreen"
+                style={{ background: "none", border: "none", color: "#fff", fontSize: 18, cursor: "pointer", padding: "0 4px", lineHeight: 1 }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Metadata panel */}
       <div style={{
         background: "rgba(0,0,0,0.35)",
         borderRadius: 12,
@@ -180,7 +392,6 @@ export default function VideoPlayer({ clip, autoplay, onUpdate, onEnded }: Props
         gap: 10,
         border: "1px solid rgba(255,107,53,0.2)",
       }}>
-        {/* Title row — large tap target */}
         <div
           onClick={() => setShowModal(true)}
           style={{
