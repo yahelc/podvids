@@ -5,7 +5,7 @@ from ..models import Clip
 from ..config import settings
 import httpx
 
-router = APIRouter(prefix="/api/clips", tags=["name"])
+router = APIRouter(tags=["name"])
 
 INFERENCE_URL = "https://inference.do-ai.run/v1/chat/completions"
 MODEL = "nemotron-nano-12b-v2-vl"
@@ -17,7 +17,7 @@ PROMPT = (
 )
 
 
-@router.get("/available-models")
+@router.get("/api/debug/models")
 def list_models():
     """Debug endpoint to see what models the inference API actually exposes."""
     if not settings.do_inference_api_key:
@@ -30,7 +30,7 @@ def list_models():
     return resp.json()
 
 
-@router.post("/{clip_id}/name")
+@router.post("/api/clips/{clip_id}/name")
 def suggest_name(clip_id: int, db: Session = Depends(get_db)):
     if not settings.do_inference_api_key:
         raise HTTPException(status_code=503, detail="DO_INFERENCE_API_KEY not configured")
