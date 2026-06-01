@@ -1,21 +1,7 @@
 import httpx
-from typing import Optional
 
 
 BASE_URL = "https://app.pingpod.com/apis/v2"
-
-
-def login(email: str, password: str) -> str:
-    """Authenticate and return a bearer token."""
-    resp = httpx.post(
-        f"{BASE_URL}/users/login",
-        json={"email": email, "password": password},
-        timeout=30,
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    # Token is typically nested under data.token or similar — adjust if needed
-    return data.get("data", {}).get("token") or data["token"]
 
 
 def list_events(token: str, page: int = 1, ipp: int = 50) -> dict:
