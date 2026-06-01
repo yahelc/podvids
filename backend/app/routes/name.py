@@ -9,13 +9,31 @@ router = APIRouter(tags=["name"])
 
 INFERENCE_URL = "https://inference.do-ai.run/v1/chat/completions"
 MODEL = "openai-gpt-4o"
-PROMPT = (
-    "This is a thumbnail from a 26-second table tennis rally clip. "
-    "Generate a fun, specific title of up to 10 words — "
-    "referencing the shot type, player position, score situation, or anything visible. "
-    "Be creative and specific. "
-    "Reply with only the title, no quotes, no punctuation at the end."
-)
+PROMPT = """You are naming a short table tennis highlight clip for a family's private video archive.
+
+PEOPLE IN THE CLIPS:
+- "Barak" is the kid (young boy, child-sized)
+- "Abba" is the dad (adult)
+- If only one person is clearly visible, use their name based on size/age
+- If both are visible, use both names
+
+NAMING STYLE — channel the fun, hype energy of Pongfinity and ping pong YouTube:
+- Use shot terminology when visible: loop, smash, flick, drive, push, chop, lob, block, banana flip, tweener, counter
+- Add dramatic flair: MONSTER, insane, epic, clutch, no-look, jaw-dropping
+- Reference the outcome or situation: match point save, impossible return, net edge luck, table-length rally
+- Keep it punchy — this is a highlight reel, not a technical report
+
+RULES:
+- Max 10 words
+- No quotes, no punctuation at the end
+- Reply with ONLY the title, nothing else
+
+Examples of good titles:
+- Barak Monster Forehand Loop Winner
+- Abba Sneaky Backspin Serve
+- Insane Cross-Court Smash by Barak
+- Abba vs Barak Epic Rally Survival
+- Clutch Lob Save Then Smash"""
 
 
 def _call_inference(image_url: str) -> str:
