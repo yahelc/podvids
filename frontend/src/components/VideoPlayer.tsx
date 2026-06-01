@@ -294,11 +294,11 @@ export default function VideoPlayer({ clip, autoplay, onUpdate, onEnded }: Props
           style={{ width: "100%", height: "100%", display: "block" }}
         />
 
-        {/* Center play/pause indicator — flashes briefly */}
+        {/* Center play/pause indicator */}
         {!playing && (
           <div style={{
             position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
-            pointerEvents: "none",
+            pointerEvents: "none", zIndex: 2,
           }}>
             <div style={{
               width: 64, height: 64, borderRadius: "50%",
@@ -314,7 +314,7 @@ export default function VideoPlayer({ clip, autoplay, onUpdate, onEnded }: Props
         <div
           onClick={(e) => e.stopPropagation()}
           style={{
-            position: "absolute", bottom: 0, left: 0, right: 0,
+            position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 2,
             background: "linear-gradient(transparent, rgba(0,0,0,0.75))",
             padding: "28px 12px 10px",
             opacity: controlsVisible ? 1 : 0,
