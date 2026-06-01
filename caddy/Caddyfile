@@ -1,0 +1,16 @@
+podvids.example.com {
+    basicauth * {
+        {$APP_USERNAME} {$APP_PASSWORD_HASH}
+    }
+
+    # Frontend static files
+    handle /api/* {
+        reverse_proxy localhost:8000
+    }
+
+    handle {
+        root * /home/user/podvids/frontend/dist
+        try_files {path} /index.html
+        file_server
+    }
+}
