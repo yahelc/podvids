@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     pingpod_password_1: str = ""
     pingpod_email_2: str = ""
     pingpod_password_2: str = ""
-    do_inference_token: str = ""
+    do_inference_api_key: str = ""
 
     class Config:
         env_file = ".env"

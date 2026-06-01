@@ -19,8 +19,8 @@ PROMPT = (
 
 @router.post("/{clip_id}/name")
 def suggest_name(clip_id: int, db: Session = Depends(get_db)):
-    if not settings.do_inference_token:
-        raise HTTPException(status_code=503, detail="DO_INFERENCE_TOKEN not configured")
+    if not settings.do_inference_api_key:
+        raise HTTPException(status_code=503, detail="DO_INFERENCE_API_KEY not configured")
 
     clip = db.query(Clip).filter(Clip.id == clip_id).first()
     if not clip:
@@ -28,7 +28,7 @@ def suggest_name(clip_id: int, db: Session = Depends(get_db)):
 
     resp = httpx.post(
         INFERENCE_URL,
-        headers={"Authorization": f"Bearer {settings.do_inference_token}"},
+        headers={"Authorization": f"Bearer {settings.do_inference_api_key}"},
         json={
             "model": MODEL,
             "max_tokens": 32,
