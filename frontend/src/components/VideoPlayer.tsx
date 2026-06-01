@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { Clip } from "../types";
 import { patchClip } from "../api";
 
@@ -9,17 +9,18 @@ interface Props {
 }
 
 function Stars({ rating, onChange }: { rating: number | null; onChange: (r: number) => void }) {
-  const [hover, setHover] = useState<number | null>(null);
-  const display = hover ?? rating ?? 0;
   return (
-    <span style={{ fontSize: 28, cursor: "pointer", lineHeight: 1, letterSpacing: 2 }}>
+    <span style={{ fontSize: 36, lineHeight: 1, letterSpacing: 4 }}>
       {[1, 2, 3, 4, 5].map((n) => (
         <span
           key={n}
-          onMouseEnter={() => setHover(n)}
-          onMouseLeave={() => setHover(null)}
           onClick={() => onChange(n)}
-          style={{ color: n <= display ? "#ffd700" : "rgba(255,255,255,0.2)", transition: "color 0.1s" }}
+          style={{
+            color: n <= (rating ?? 0) ? "#ffd700" : "rgba(255,255,255,0.2)",
+            cursor: "pointer",
+            padding: "4px 2px",
+            display: "inline-block",
+          }}
         >
           ★
         </span>
@@ -39,14 +40,69 @@ function formatDate(iso: string): string {
   });
 }
 
-export default function VideoPlayer({ clip, onUpdate, onEnded }: Props) {
-  const [editing, setEditing] = useState(false);
-  const [titleDraft, setTitleDraft] = useState(clip.title ?? "");
+function TitleModal({ current, onSave, onClose }: { current: string; onSave: (t: string) => void; onClose: () => void }) {
+  const [draft, setDraft] = useState(current);
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+        zIndex: 100,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#1a2a3a",
+          borderRadius: "20px 20px 0 0",
+          padding: "24px 24px 40px",
+          width: "100%",
+          maxWidth: 600,
+          borderTop: "3px solid #ff6b35",
+        }}
+      >
+        <div style={{ fontSize: 16, fontWeight: 700, color: "#ff6b35", marginBottom: 16 }}>Name this rally</div>
+        <input
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="e.g. Epic backhand winner"
+          style={{
+            width: "100%",
+            fontSize: 18,
+            padding: "14px 16px",
+            borderRadius: 10,
+            border: "2px solid #ff6b35",
+            background: "#0f2027",
+            color: "#fff",
+            outline: "none",
+          }}
+        />
+        <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
+          <button
+            onClick={onClose}
+            style={{ flex: 1, padding: 16, borderRadius: 10, border: "1px solid #555", background: "transparent", color: "#aaa", fontSize: 16, cursor: "pointer" }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => { onSave(draft); onClose(); }}
+            style={{ flex: 2, padding: 16, borderRadius: 10, border: "none", background: "#ff6b35", color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer" }}
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-  async function commitTitle() {
-    setEditing(false);
-    if (titleDraft === (clip.title ?? "")) return;
-    const updated = await patchClip(clip.id, { title: titleDraft });
+export default function VideoPlayer({ clip, onUpdate, onEnded }: Props) {
+  const [showModal, setShowModal] = useState(false);
+
+  async function handleSaveTitle(title: string) {
+    const updated = await patchClip(clip.id, { title });
     onUpdate(updated);
   }
 
@@ -65,42 +121,46 @@ export default function VideoPlayer({ clip, onUpdate, onEnded }: Props) {
         onEnded={onEnded}
         style={{ width: "100%", flex: 1, minHeight: 0, background: "#000", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}
       />
+
       <div style={{
         background: "rgba(0,0,0,0.35)",
         borderRadius: 12,
-        padding: "12px 16px",
+        padding: "14px 16px",
         display: "flex",
         flexDirection: "column",
-        gap: 8,
+        gap: 10,
         border: "1px solid rgba(255,107,53,0.2)",
       }}>
-        {editing ? (
-          <input
-            value={titleDraft}
-            onChange={(e) => setTitleDraft(e.target.value)}
-            onBlur={commitTitle}
-            onKeyDown={(e) => { if (e.key === "Enter") commitTitle(); if (e.key === "Escape") { setEditing(false); setTitleDraft(clip.title ?? ""); } }}
-            autoFocus
-            placeholder="Name this rally…"
-            style={{ fontSize: 20, fontWeight: 700, background: "transparent", border: "none", borderBottom: "2px solid #ff6b35", color: "#fff", outline: "none", padding: "2px 0", width: "100%" }}
-          />
-        ) : (
-          <div
-            onClick={() => { setEditing(true); setTitleDraft(clip.title ?? ""); }}
-            title="Tap to edit title"
-            style={{ fontSize: 20, fontWeight: 700, color: clip.title ? "#fff" : "rgba(255,255,255,0.3)", cursor: "text" }}
-          >
-            {clip.title || "Tap to name this rally…"}
-          </div>
-        )}
+        {/* Title row — large tap target */}
+        <div
+          onClick={() => setShowModal(true)}
+          style={{
+            fontSize: 18,
+            fontWeight: 700,
+            color: clip.title ? "#fff" : "rgba(255,255,255,0.35)",
+            cursor: "pointer",
+            padding: "6px 0",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            minHeight: 44,
+          }}
+        >
+          <span style={{ flex: 1 }}>{clip.title || "Tap to name this rally…"}</span>
+          <span style={{ fontSize: 18, opacity: 0.5 }}>✏️</span>
+        </div>
+
         <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
           <Stars rating={clip.rating} onChange={handleRating} />
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <span style={{ fontSize: 13, color: "#aaa" }}>{formatDate(clip.recorded_at)}</span>
           <span style={{
-            fontSize: 11,
+            fontSize: 12,
             background: clip.account === "account1" ? "rgba(255,107,53,0.3)" : "rgba(100,180,255,0.3)",
             color: clip.account === "account1" ? "#ff9a70" : "#80c8ff",
-            padding: "2px 8px",
+            padding: "3px 10px",
             borderRadius: 20,
             fontWeight: 600,
           }}>
@@ -108,6 +168,14 @@ export default function VideoPlayer({ clip, onUpdate, onEnded }: Props) {
           </span>
         </div>
       </div>
+
+      {showModal && (
+        <TitleModal
+          current={clip.title ?? ""}
+          onSave={handleSaveTitle}
+          onClose={() => setShowModal(false)}
+        />
+      )}
     </div>
   );
 }

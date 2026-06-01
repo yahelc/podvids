@@ -23,7 +23,7 @@ export default function ClipItem({ clip, active, onClick }: Props) {
       style={{
         display: "flex",
         gap: 10,
-        padding: "10px 12px",
+        padding: "12px 12px",
         cursor: "pointer",
         background: active
           ? "linear-gradient(135deg, rgba(255,107,53,0.25), rgba(255,107,53,0.1))"
@@ -38,7 +38,7 @@ export default function ClipItem({ clip, active, onClick }: Props) {
         <img
           src={clip.thumb_url}
           alt=""
-          style={{ width: 76, height: 52, objectFit: "cover", borderRadius: 6, flexShrink: 0, border: active ? "2px solid #ff6b35" : "2px solid transparent" }}
+          style={{ width: 80, height: 56, objectFit: "cover", borderRadius: 6, flexShrink: 0, border: active ? "2px solid #ff6b35" : "2px solid transparent" }}
         />
       ) : (
         <div style={{ width: 76, height: 52, background: "#1a2a3a", borderRadius: 6, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🏓</div>
