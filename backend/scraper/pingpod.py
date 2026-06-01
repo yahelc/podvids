@@ -42,24 +42,10 @@ def list_events(token: str, page: int = 1, ipp: int = 50) -> dict:
 def extract_replays(event: dict, account_label: str) -> list[dict]:
     """Extract replay dicts from a single event object."""
     replays = []
-    replay_items = (
-        event.get("_links", {})
-        .get("replays", {})
-        .get("items", [])
-    )
+    replay_items = event.get("replays", {}).get("items", [])
     for replay in replay_items:
-        video_href = (
-            replay.get("_links", {})
-            .get("video", {})
-            .get("items", [{}])[0]
-            .get("href")
-        )
-        thumb_href = (
-            replay.get("_links", {})
-            .get("preview", {})
-            .get("items", [{}])[0]
-            .get("href")
-        )
+        video_href = replay.get("video", {}).get("high", {}).get("href")
+        thumb_href = replay.get("preview", {}).get("small", {}).get("href")
         if not video_href:
             continue
         replays.append({
