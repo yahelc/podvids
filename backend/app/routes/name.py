@@ -52,6 +52,7 @@ def suggest_name(clip_id: int, db: Session = Depends(get_db)):
     )
 
     if resp.status_code != 200:
+        print(f"Inference API error: status={resp.status_code} body={resp.text[:500]}")
         raise HTTPException(status_code=502, detail=f"Inference API error: {resp.text[:200]}")
 
     name = resp.json()["choices"][0]["message"]["content"].strip()
