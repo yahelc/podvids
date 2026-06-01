@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { Clip } from "../types";
 import { patchClip } from "../api";
 
 interface Props {
   clip: Clip;
+  autoplay: boolean;
   onUpdate: (updated: Clip) => void;
   onEnded: () => void;
 }
@@ -99,8 +100,15 @@ function TitleModal({ current, onSave, onClose }: { current: string; onSave: (t:
   );
 }
 
-export default function VideoPlayer({ clip, onUpdate, onEnded }: Props) {
+export default function VideoPlayer({ clip, autoplay, onUpdate, onEnded }: Props) {
   const [showModal, setShowModal] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (autoplay && videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
+  }, [clip.id]);
 
   async function handleSaveTitle(title: string) {
     const updated = await patchClip(clip.id, { title });
@@ -116,6 +124,7 @@ export default function VideoPlayer({ clip, onUpdate, onEnded }: Props) {
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, padding: "12px 16px 16px", gap: 12 }}>
       <video
         key={clip.id}
+        ref={videoRef}
         src={clip.video_url}
         controls
         playsInline

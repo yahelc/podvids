@@ -63,7 +63,7 @@ export default function App() {
         </div>
 
         {activeClip ? (
-          <VideoPlayer clip={activeClip} onUpdate={handleUpdate} onEnded={handleEnded} />
+          <VideoPlayer clip={activeClip} autoplay={autoplay} onUpdate={handleUpdate} onEnded={handleEnded} />
         ) : (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, color: "#aaa" }}>
             <span style={{ fontSize: 64 }}>🏓</span>
