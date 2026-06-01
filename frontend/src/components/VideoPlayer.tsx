@@ -311,15 +311,13 @@ export default function VideoPlayer({ clip, autoplay, onUpdate, onEnded }: Props
         )}
 
         {/* Bottom controls overlay */}
+        {controlsVisible && (
         <div
           onClick={(e) => e.stopPropagation()}
           style={{
             position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 2,
             background: "linear-gradient(transparent, rgba(0,0,0,0.75))",
             padding: "28px 12px 10px",
-            opacity: controlsVisible ? 1 : 0,
-            transition: "opacity 0.3s",
-            pointerEvents: controlsVisible ? "auto" : "none",
           }}
         >
           {/* Seek bar */}
@@ -380,6 +378,7 @@ export default function VideoPlayer({ clip, autoplay, onUpdate, onEnded }: Props
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* Metadata panel */}
