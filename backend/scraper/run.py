@@ -15,6 +15,7 @@ def scrape_account(label: str, token: str, db) -> int:
     if not token:
         print(f"Skipping {label}: no bearer token configured")
         return 0
+    print(f"  Token prefix: {token[:10]}... (len={len(token)})")
 
     inserted = 0
     page = 1
