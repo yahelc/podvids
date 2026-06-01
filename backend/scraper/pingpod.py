@@ -6,23 +6,22 @@ BASE_URL = "https://app.pingpod.com/apis/v2"
 
 def list_events(token: str, page: int = 1, ipp: int = 50) -> dict:
     """Fetch one page of events with replays expanded."""
-    params = {
-        "selfOnly": "true",
-        "excludeListed": "true",
-        "includeSuspended": "true",
-        "expand": [
-            "items._links.replays",
-        ],
-        "sort": "-startTime",
-        "page": page,
-        "ipp": ipp,
-    }
     resp = httpx.get(
         f"{BASE_URL}/events",
-        params=params,
+        params=[
+            ("selfOnly", "true"),
+            ("excludeListed", "true"),
+            ("includeSuspended", "true"),
+            ("expand", "items._links.replays"),
+            ("sort", "-startTime"),
+            ("page", page),
+            ("ipp", ipp),
+        ],
         headers={"Authorization": f"Bearer {token}"},
         timeout=30,
     )
+    print(f"  Request URL: {resp.request.url}")
+    print(f"  Response status: {resp.status_code}")
     resp.raise_for_status()
     return resp.json()
 
