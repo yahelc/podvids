@@ -1,7 +1,19 @@
 import httpx
-
+from typing import Optional
 
 BASE_URL = "https://app.pingpod.com/apis/v2"
+FIREBASE_API_KEY = "AIzaSyB6hVfDS4tKY6R6oD7Z8l1uAejQEulSsVs"
+
+
+def login(email: str, password: str) -> str:
+    """Authenticate with Firebase and return a bearer token."""
+    resp = httpx.post(
+        f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_API_KEY}",
+        json={"email": email, "password": password, "returnSecureToken": True},
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json()["idToken"]
 
 
 def list_events(token: str, page: int = 1, ipp: int = 50) -> dict:

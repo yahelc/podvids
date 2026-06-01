@@ -2,20 +2,22 @@ from datetime import datetime
 
 from app.database import SessionLocal
 from app.models import Clip
-from scraper.pingpod import list_events, extract_replays
+from scraper.pingpod import login, list_events, extract_replays
 from app.config import settings
 
 ACCOUNTS = [
-    ("account1", settings.pingpod_bearer_token_1),
-    ("account2", settings.pingpod_bearer_token_2),
+    ("account1", settings.pingpod_email_1, settings.pingpod_password_1),
+    ("account2", settings.pingpod_email_2, settings.pingpod_password_2),
 ]
 
 
-def scrape_account(label: str, token: str, db) -> int:
-    if not token:
-        print(f"Skipping {label}: no bearer token configured")
+def scrape_account(label: str, email: str, password: str, db) -> int:
+    if not email or not password:
+        print(f"Skipping {label}: no credentials configured")
         return 0
-    print(f"  Token prefix: {token[:10]}... (len={len(token)})")
+    print(f"  Authenticating {label} as {email}...")
+    token = login(email, password)
+    print(f"  Got token, prefix: {token[:10]}...")
 
     inserted = 0
     page = 1
@@ -67,8 +69,8 @@ def scrape_all():
     db = SessionLocal()
     try:
         total = 0
-        for label, token in ACCOUNTS:
-            total += scrape_account(label, token, db)
+        for label, email, password in ACCOUNTS:
+            total += scrape_account(label, email, password, db)
         print(f"Scrape complete: {total} total new clips")
     finally:
         db.close()
