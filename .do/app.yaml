@@ -1,0 +1,34 @@
+name: podvids
+
+services:
+  - name: backend
+    source_dir: backend
+    dockerfile_path: backend/Dockerfile
+    http_port: 8080
+    instance_size_slug: basic-xxs
+    instance_count: 1
+    envs:
+      - key: DATABASE_URL
+        value: sqlite:///./podvids.db
+      - key: PINGPOD_EMAIL_1
+        scope: RUN_TIME
+        type: SECRET
+      - key: PINGPOD_PASSWORD_1
+        scope: RUN_TIME
+        type: SECRET
+      - key: PINGPOD_EMAIL_2
+        scope: RUN_TIME
+        type: SECRET
+      - key: PINGPOD_PASSWORD_2
+        scope: RUN_TIME
+        type: SECRET
+
+  - name: frontend
+    source_dir: frontend
+    dockerfile_path: frontend/Dockerfile
+    http_port: 8080
+    instance_size_slug: basic-xxs
+    instance_count: 1
+    envs:
+      - key: VITE_API_URL
+        value: ${backend.PUBLIC_URL}

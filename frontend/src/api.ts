@@ -1,7 +1,9 @@
 import type { Clip } from "./types";
 
+const BASE = import.meta.env.VITE_API_URL ?? "";
+
 export async function fetchClips(sort: string): Promise<Clip[]> {
-  const res = await fetch(`/api/clips?sort=${sort}`);
+  const res = await fetch(`${BASE}/api/clips?sort=${sort}`);
   if (!res.ok) throw new Error("Failed to fetch clips");
   return res.json();
 }
@@ -10,7 +12,7 @@ export async function patchClip(
   id: number,
   patch: { title?: string; rating?: number }
 ): Promise<Clip> {
-  const res = await fetch(`/api/clips/${id}`, {
+  const res = await fetch(`${BASE}/api/clips/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
@@ -20,5 +22,5 @@ export async function patchClip(
 }
 
 export async function triggerScrape(): Promise<void> {
-  await fetch("/api/scraper/run", { method: "POST" });
+  await fetch(`${BASE}/api/scraper/run`, { method: "POST" });
 }
