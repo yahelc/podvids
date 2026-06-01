@@ -24,6 +24,9 @@ def scrape_account(label: str, email: str, password: str, db) -> int:
     while True:
         print(f"  Fetching page {page}...")
         data = list_events(token, page=page, ipp=50)
+        import json
+        print(f"  Raw response keys: {list(data.keys())}")
+        print(f"  Raw response (truncated): {json.dumps(data)[:1000]}")
         events = data.get("items", [])
         print(f"  Got {len(events)} events, total={data.get('total')}")
         if events:
