@@ -22,7 +22,9 @@ def list_events(token: str, page: int = 1, ipp: int = 50) -> dict:
         f"{BASE_URL}/events",
         params=[
             ("selfOnly", "true"),
-            ("expand", "items._links.replays"),
+            ("excludeListed", "true"),
+            ("includeSuspended", "true"),
+            ("expand", "items.replays"),
             ("sort", "-startTime"),
             ("startTime", "1970-01-01T00:00:00.000Z"),
             ("page", page),
@@ -41,8 +43,7 @@ def extract_replays(event: dict, account_label: str) -> list[dict]:
     """Extract replay dicts from a single event object."""
     replays = []
     replay_items = (
-        event.get("_links", {})
-        .get("replays", {})
+        event.get("replays", {})
         .get("items", [])
     )
     for replay in replay_items:
