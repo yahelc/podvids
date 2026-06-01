@@ -17,6 +17,19 @@ PROMPT = (
 )
 
 
+@router.get("/available-models")
+def list_models():
+    """Debug endpoint to see what models the inference API actually exposes."""
+    if not settings.do_inference_api_key:
+        raise HTTPException(status_code=503, detail="DO_INFERENCE_API_KEY not configured")
+    resp = httpx.get(
+        "https://inference.do-ai.run/v1/models",
+        headers={"Authorization": f"Bearer {settings.do_inference_api_key}"},
+        timeout=15,
+    )
+    return resp.json()
+
+
 @router.post("/{clip_id}/name")
 def suggest_name(clip_id: int, db: Session = Depends(get_db)):
     if not settings.do_inference_api_key:
