@@ -1,13 +1,9 @@
-import sys
-import os
 from datetime import datetime
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
-
-from backend.app.database import SessionLocal
-from backend.app.models import Clip
-from backend.scraper.pingpod import login, list_events, extract_replays
-from backend.app.config import settings
+from app.database import SessionLocal
+from app.models import Clip
+from scraper.pingpod import login, list_events, extract_replays
+from app.config import settings
 
 ACCOUNTS = [
     ("account1", settings.pingpod_email_1, settings.pingpod_password_1),

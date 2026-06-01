@@ -7,6 +7,6 @@ router = APIRouter(prefix="/api/scraper", tags=["scraper"])
 
 @router.post("/run")
 def run_scraper(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    from ...scraper.run import scrape_all
+    from scraper.run import scrape_all
     background_tasks.add_task(scrape_all)
     return {"status": "started"}
