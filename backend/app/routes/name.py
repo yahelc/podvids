@@ -4,6 +4,10 @@ from ..database import get_db, SessionLocal
 from ..models import Clip
 from ..config import settings
 import httpx
+import subprocess
+import tempfile
+import base64
+import os
 from datetime import date, datetime, timezone
 
 router = APIRouter(tags=["name"])
@@ -16,18 +20,22 @@ SKIP_DATE = date(2026, 2, 7)
 PROMPT_TEMPLATE = """You are naming a short table tennis highlight clip for a family's private video archive.
 This clip was recorded on {date_context}.
 
+You are being shown multiple frames sampled from the clip so you can see the rally in action.
+
+IGNORE THE BUTTON-PRESS RUN: At the end of every clip, one player runs off to the side to press a button on the PingPod machine to save the clip. Ignore this completely — it is not part of the gameplay. Focus only on the actual table tennis rally.
+
 PEOPLE IN THE CLIPS:
 - "Barak" is the kid (young boy, child-sized, shorter)
 - "Abba" is the dad (adult, taller)
-- Name only the person(s) clearly visible — use size/age to distinguish them
-- If both are visible, name both
+- Name only the person(s) visible during the rally — use size/age to distinguish them
+- If both are visible during play, name both
 
-SHOT VOCABULARY — identify and use the most specific term you can see:
+SHOT VOCABULARY — identify and use the most specific term you can see across the frames:
 - Serves: topspin serve, backspin serve, no-look serve, short push serve
 - Attacking: forehand loop, backhand loop, forehand smash, backhand smash, flick, banana flip, counter-loop, speed drive
 - Defensive: push, chop, lob, block, fishing lob, desperation retrieve
 - Trick shots: tweener (between the legs), around-the-net, behind-the-back, jump smash
-- Rally descriptors: table-length exchange, multiball rally, cross-court duel, down-the-line winner
+- Rally descriptors: table-length exchange, long rally, cross-court duel, down-the-line winner
 
 SEASONAL / DATE CONTEXT — weave in when it fits naturally:
 - January 1: New Year's Day
@@ -43,14 +51,13 @@ SEASONAL / DATE CONTEXT — weave in when it fits naturally:
 VARIETY RULES — vary your sentence structure every title:
 - Sometimes lead with the shot: "Banana Flip Winner by Barak"
 - Sometimes lead with the person: "Barak Rips a No-Look Serve"
-- Sometimes lead with the drama: "Incredible Lob Save Then Smash"
+- Sometimes lead with the drama: "Clutch Lob Save Then Smash"
 - Sometimes use a scene-setting word: "Late-Night Loop Fest Barak vs Abba"
-- Sometimes be poetic or punny: "Abba Drops the Hammer", "Winter Ace by Barak"
-- Avoid starting back-to-back titles with the same word (especially avoid overusing "Epic")
+- Sometimes be poetic or punny: "Abba Drops the Hammer", "Summer Ace by Barak"
 - Forbidden words (do NOT use): epic, legendary, incredible, amazing, unbelievable
 
 RULES:
-- Max 10 words
+- Max 15 words
 - No quotes, no punctuation at the end
 - Reply with ONLY the title, nothing else
 
@@ -103,25 +110,58 @@ def _build_prompt(recorded_at: datetime | None) -> str:
     return PROMPT_TEMPLATE.format(date_context=date_str, holiday_hint=holiday_hint)
 
 
-def _call_inference(image_url: str, recorded_at: datetime | None = None) -> str:
+def _extract_frames(video_url: str) -> list[str]:
+    """Extract frames at 5s, 6s, 7s, ... up to 20 frames as base64 data URIs."""
+    frames = []
+    with tempfile.TemporaryDirectory() as tmpdir:
+        for i in range(20):
+            t = 5 + i
+            frame_path = os.path.join(tmpdir, f"frame_{i:02d}.jpg")
+            result = subprocess.run(
+                ["ffmpeg", "-y", "-ss", str(t), "-i", video_url,
+                 "-vframes", "1", "-q:v", "4", "-vf", "scale=640:-1", frame_path],
+                capture_output=True, timeout=30,
+            )
+            if result.returncode != 0 or not os.path.exists(frame_path):
+                break  # past end of video
+            with open(frame_path, "rb") as f:
+                data = base64.b64encode(f.read()).decode()
+            frames.append(f"data:image/jpeg;base64,{data}")
+    return frames
+
+
+def _call_inference(video_url: str, thumb_url: str | None, recorded_at: datetime | None = None) -> str:
     prompt = _build_prompt(recorded_at)
+
+    # Try to extract multi-frame sequence; fall back to thumbnail
+    frames = []
+    try:
+        frames = _extract_frames(video_url)
+    except Exception as e:
+        print(f"  Frame extraction failed, falling back to thumbnail: {e}")
+
+    if frames:
+        image_content = [{"type": "image_url", "image_url": {"url": f}} for f in frames]
+        print(f"  Sending {len(frames)} frames to inference")
+    else:
+        fallback = thumb_url or video_url
+        image_content = [{"type": "image_url", "image_url": {"url": fallback}}]
+        print(f"  Sending thumbnail to inference (fallback)")
+
     resp = httpx.post(
         INFERENCE_URL,
         headers={"Authorization": f"Bearer {settings.do_inference_api_key}"},
         json={
             "model": MODEL,
-            "max_tokens": 48,
+            "max_tokens": 64,
             "messages": [
                 {
                     "role": "user",
-                    "content": [
-                        {"type": "image_url", "image_url": {"url": image_url}},
-                        {"type": "text", "text": prompt},
-                    ],
+                    "content": [*image_content, {"type": "text", "text": prompt}],
                 }
             ],
         },
-        timeout=60,
+        timeout=120,
     )
     if resp.status_code != 200:
         print(f"Inference API error: model={MODEL} status={resp.status_code} body={resp.text[:500]}")
@@ -141,8 +181,7 @@ def name_untitled_clips():
         print(f"Auto-namer: {len(to_name)} untitled clips to process, {len(skipped)} skipped (Feb 7)")
         for clip in to_name:
             try:
-                image_url = clip.thumb_url or clip.video_url
-                name = _call_inference(image_url, clip.recorded_at)
+                name = _call_inference(clip.video_url, clip.thumb_url, clip.recorded_at)
                 clip.title = name
                 db.commit()
                 print(f"  Named clip {clip.id}: {name}")
@@ -166,8 +205,7 @@ def trigger_name_untitled():
         print(f"Auto-namer triggered: {len(to_name)} untitled clips ({skipped_count} skipped, Feb 7)")
         for clip in to_name:
             try:
-                image_url = clip.thumb_url or clip.video_url
-                name = _call_inference(image_url, clip.recorded_at)
+                name = _call_inference(clip.video_url, clip.thumb_url, clip.recorded_at)
                 clip.title = name
                 db.commit()
                 print(f"  Named clip {clip.id}: {name}")
@@ -200,5 +238,5 @@ def suggest_name(clip_id: int, db: Session = Depends(get_db)):
     if not clip:
         raise HTTPException(status_code=404, detail="Clip not found")
 
-    name = _call_inference(clip.thumb_url or clip.video_url, clip.recorded_at)
+    name = _call_inference(clip.video_url, clip.thumb_url, clip.recorded_at)
     return {"name": name}
