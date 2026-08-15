@@ -278,8 +278,7 @@ export default function VideoPlayer({ clip, autoplay, onUpdate, onEnded }: Props
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, padding: "12px 16px 16px", gap: 12, overflowY: "auto" }}>
       {/* Video container with custom controls */}
       <div
-        style={{ position: "relative", width: "100%", aspectRatio: "16/9", background: "#000", borderRadius: 12, overflow: "hidden", flexShrink: 0, boxShadow: "0 8px 32px rgba(0,0,0,0.5)", cursor: "pointer" }}
-        onClick={handleVideoTap}
+        style={{ position: "relative", width: "100%", aspectRatio: "16/9", background: "#000", borderRadius: 12, overflow: "hidden", flexShrink: 0, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}
       >
         <video
           key={clip.id}
@@ -292,6 +291,13 @@ export default function VideoPlayer({ clip, autoplay, onUpdate, onEnded }: Props
           onPlay={handlePlay}
           onPause={handlePause}
           style={{ width: "100%", height: "100%", display: "block" }}
+        />
+
+        {/* Transparent tap catcher — sits above video, below controls.
+            Needed because iOS Safari swallows clicks on <video> elements. */}
+        <div
+          onClick={handleVideoTap}
+          style={{ position: "absolute", inset: 0, zIndex: 1, cursor: "pointer" }}
         />
 
         {/* Center play/pause indicator */}
